@@ -1,8 +1,15 @@
 import express from "express";
 import middlewaresConfig from "./config/middlewares";
 import pollRoutes from "./routes/pollRoutes.js";
+import http from 'http';
+import io from "./config/socket.js";
+import SocketIO from "socket.io";
 
 const app = express();
+const server = http.Server(app);
+const socket = new SocketIO(server);
+
+io(socket);
 
 middlewaresConfig(app);
 
@@ -14,12 +21,13 @@ app.use(function(req, res, next) {
     "Access-Control-Allow-Headers",
     "Origin, X-Requested-With, Content-Type, Accept"
   );
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
   next();
 });
 
 app.use("/api", pollRoutes);
 
-app.listen(PORT, err => {
+server.listen(PORT, err => {
   if (err) {
     throw err;
   } else {

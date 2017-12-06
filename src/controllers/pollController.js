@@ -1,13 +1,10 @@
 import db from "../config/db.js";
-import generateID from "../config/IDGenerator";
+import getUniqID from "../config/IDGenerator";
 
-exports.GETlistOfAllPolls = async (req, res) => {
+const GETlistOfAllPolls = async (req, res) => {
   try {
-    const baseSnapshot = db.ref("polls/").once("value");
-
-    const pollsSnapshot = await baseSnapshot;
-
-    const response = pollsSnapshot.val();
+    const base = await db.ref("polls/").once("value");
+    const response = base.val();
 
     if (!response) {
       res.status(404).json({ response, status: "Error 404 Not Found" });
@@ -22,10 +19,11 @@ exports.GETlistOfAllPolls = async (req, res) => {
   }
 };
 
-exports.GETpollID = async (req, res) => {
+const GETpollID = async (req, res) => {
   try {
-    const pollsSnapshot = await db.ref(`polls/${req.params.id}`).once("value");
-    const response = pollsSnapshot.val();
+    const base = await db.ref(`polls/${req.params.id}`).once("value");
+    const response = base.val();
+
     if (!response) {
       res.status(404).json({ response, status: "Error 404 Not Found" });
       console.log("Synchronization failed");
@@ -39,46 +37,12 @@ exports.GETpollID = async (req, res) => {
   }
 };
 
-exports.create = function(req, res) {
-  let uid = generateID(5);
-  let dz = new Date().toString();
-  console.log("generateID", uid);
-  db
-    .ref(`polls/${uid}`)
-    .set({
-      answers: {
-        [uid + "_1"]: {
-          ans: "This1",
-          cou: "2"
-        },
-        [uid + "_2"]: {
-          ans: "This2",
-          cou: "2"
-        }
-      },
-      question: "Го цілу ніч програмувати?",
-      type: "this is type",
-      timestamp: dz
-    })
-    .then(function() {
-      res.status(200);
-      console.log("Synchronization succeeded");
-    })
-    .catch(function(error) {
-      res.status(404).send("Error ::: Not ::: Found.");
-      console.log("Synchronization failed");
-    });
-  res.json({
-    message: "hooray! welcome to our api!"
-  });
-};
-
-exports.POSTCreatePoll = (req, res) => {
-  let uid = generateID(5);
-
-  let createDate = new Date().toString();
+const POSTCreatePoll = (req, res) => {
+  let uid = getUniqID(6),
+      createDate = new Date().toString();
 
   const { type, question, answers } = req.body;
+
 
   let newAnswers = answers.reduce((previousValue, currentItem, index) => {
     previousValue["ans" + index] = {
@@ -99,21 +63,16 @@ exports.POSTCreatePoll = (req, res) => {
       if (error) {
         res.status(500).send(`ERROR ::: ${error}`);
       } else {
-        res.status(201).send(`Poll created, your poll id: ${uid}`);
+        res.status(201).json({id: uid, status: `Poll created, your poll id: ${uid}`});
       }
     }
   );
 };
 
-exports.PUTPollAnswers = async (req, res) => {
+const PUTPollAnswers = async (req, res) => {
   try {
-    const baseSnapshot = db.ref(
-      `polls/${req.params.id}/answers/${req.params.ansid}`
-    );
-    const valSnapshot = baseSnapshot.once("value");
-
-    const pollsSnapshot = await valSnapshot;
-
+    const base = db.ref(`polls/${req.params.id}/answers/${req.params.ansid}`);
+    let pollsSnapshot = await base.once("value");
     const response = pollsSnapshot.val();
 
     if (!response) {
@@ -123,17 +82,11 @@ exports.PUTPollAnswers = async (req, res) => {
       });
       console.log("Synchronization failed");
     } else {
-      const updatedPollSnapshot = db
-        .ref(`polls/${req.params.id}/answers/${req.params.ansid}`)
-        .once("value");
-
-      baseSnapshot.update({
-        counter: response.counter + 1
+      base.update({
+        counter: ++response.counter
       });
-
-      const updatedPoll = await updatedPollSnapshot;
-
-      const updatedResponse = updatedPoll.val();
+      pollsSnapshot = await base.once("value");
+      const updatedResponse = pollsSnapshot.val();
 
       res
         .status(200)
@@ -144,4 +97,11 @@ exports.PUTPollAnswers = async (req, res) => {
     res.status(404).send(`ERROR ::: ${error}`);
     console.log(`ERROR ::: ${error}`);
   }
+};
+
+module.exports = {
+    GETlistOfAllPolls: GETlistOfAllPolls,
+    GETpollID: GETpollID,
+    POSTCreatePoll: POSTCreatePoll,
+    PUTPollAnswers: PUTPollAnswers
 };

@@ -11,9 +11,4 @@ router.post("/create", pollController.POSTCreatePoll);
 
 router.put("/poll/:id/:ansid", pollController.PUTPollAnswers);
 
-/**
- * for statick
- */
-router.get("/createstatick", pollController.create);
-
 module.exports = router;
